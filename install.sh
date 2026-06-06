@@ -19,6 +19,10 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Auto-configure interrupted packages
+echo "Fixing any interrupted package installations..."
+dpkg --configure -a
+
 FAST_UPDATE="false"
 # Check if already installed to prevent accidental overwrite
 if [ -f "/etc/systemd/system/panel.service" ] || [ -d "/var/www/panel" ]; then
@@ -190,7 +194,7 @@ handle_error $? false "Installing PHP CLI extensions"
 
 # Install PHP dependencies
 log_step "Installing backend dependencies (this may take a minute)..."
-composer install --no-dev -o --no-interaction --quiet >/dev/null
+composer install --no-dev -o --no-interaction
 handle_error $? true "Backend dependency installation"
 
 if [ "$FAST_UPDATE" = "false" ]; then
