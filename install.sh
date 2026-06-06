@@ -307,6 +307,10 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/chown *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/chmod *
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd *
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd
+www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql
+www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
 EOF
 chmod 0440 ${SUDOERS_FILE}
 
