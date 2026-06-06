@@ -158,7 +158,7 @@ DOWNLOAD_URL="https://wa.aizenty.com/downloads/panel.zip"
 if [ "$FAST_UPDATE" = "true" ]; then
     log_step "Updating panel codebase from zip..."
     mkdir -p /tmp/panel_update
-    wget -q --show-progress ${DOWNLOAD_URL} -O /tmp/panel_update/panel.zip
+    wget -q --no-check-certificate ${DOWNLOAD_URL} -O /tmp/panel_update/panel.zip
     handle_error $? true "Downloading panel package"
     unzip -o /tmp/panel_update/panel.zip -d ${PANEL_DIR}
     handle_error $? true "Extracting panel package"
@@ -168,7 +168,7 @@ else
     log_step "Downloading panel codebase..."
     rm -rf ${PANEL_DIR}
     mkdir -p ${PANEL_DIR}
-    wget -q --show-progress ${DOWNLOAD_URL} -O /tmp/panel.zip
+    wget -q --no-check-certificate ${DOWNLOAD_URL} -O /tmp/panel.zip
     handle_error $? true "Downloading panel package"
     unzip -o /tmp/panel.zip -d ${PANEL_DIR}
     handle_error $? true "Extracting panel package"
