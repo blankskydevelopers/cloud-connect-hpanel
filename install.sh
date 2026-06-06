@@ -189,13 +189,13 @@ apt-get update -y && apt-get install -y php${CLI_PHP_VERSION}-xml php${CLI_PHP_V
 handle_error $? false "Installing PHP CLI extensions"
 
 # Install PHP dependencies
-log_step "Installing Laravel Composer dependencies..."
-composer install --no-dev -o --no-interaction
-handle_error $? true "Laravel Composer installation"
+log_step "Installing backend dependencies (this may take a minute)..."
+composer install --no-dev -o --no-interaction --quiet
+handle_error $? true "Backend dependency installation"
 
 if [ "$FAST_UPDATE" = "false" ]; then
     # Setup configuration
-    log_step "Configuring Laravel environment..."
+    log_step "Configuring environment configuration..."
     if [ ! -f .env ]; then
         cp .env.example .env
     fi
@@ -234,15 +234,15 @@ chmod -R 775 database
 
 if [ "$FAST_UPDATE" = "false" ]; then
     # Generate Application Keys
-    php artisan key:generate --ansi --force
+    php artisan key:generate --ansi --force --quiet
 fi
 
 # Clear any cached configuration to prevent stale credentials
-php artisan config:clear
-php artisan cache:clear
+php artisan config:clear --quiet
+php artisan cache:clear --quiet
 
 # Run migrations (Safe to run always)
-php artisan migrate --force
+php artisan migrate --force --quiet
 
 if [ "$FAST_UPDATE" = "false" ]; then
     # --- Step 8b: Install and Configure phpMyAdmin Securely ---
@@ -398,10 +398,10 @@ systemctl restart redis-server
 systemctl enable cron
 systemctl restart cron
 
-# Configure Laravel schedule runner cron job for panel background tasks
-log_step "Configuring Laravel scheduler cron job..."
+# Configure scheduler cron job for panel background tasks
+log_step "Configuring background task scheduler cron job..."
 (crontab -u www-data -l 2>/dev/null; echo "* * * * * cd ${PANEL_DIR} && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -u www-data -
-handle_error $? false "Laravel scheduler cron setup"
+handle_error $? false "Task scheduler cron setup"
 
 log_step "=========================================================="
 log_step " Installation completed successfully! "
