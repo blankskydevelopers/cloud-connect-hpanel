@@ -193,7 +193,8 @@ apt-get update -y && apt-get install -y php${CLI_PHP_VERSION}-xml php${CLI_PHP_V
 handle_error $? false "Installing PHP CLI extensions"
 
 # Install PHP dependencies
-log_step "Installing backend dependencies (this may take a minute)..."
+log_step "Installing backend dependencies (this may take a few minutes)..."
+rm -f bootstrap/cache/config.php bootstrap/cache/routes.php bootstrap/cache/services.php bootstrap/cache/packages.php
 composer install --no-dev -o --no-interaction
 handle_error $? true "Backend dependency installation"
 
