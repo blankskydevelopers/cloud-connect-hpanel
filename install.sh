@@ -265,6 +265,9 @@ if [ "$FAST_UPDATE" = "false" ]; then
             BLOWFISH_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
             cp ${PMA_DIR}/config.sample.inc.php ${PMA_DIR}/config.inc.php
             sed -i "s/\$cfg\['blowfish_secret'\] = '';/\$cfg\['blowfish_secret'\] = '${BLOWFISH_SECRET}';/g" ${PMA_DIR}/config.inc.php
+            
+            # Use Single Sign-On (SSO) signon auth method
+            sed -i "s/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'cookie';/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'signon';\n\$cfg\['Servers'\]\[\$i\]\['SignonSession'\] = 'PmaSignonSession';\n\$cfg\['Servers'\]\[\$i\]\['SignonURL'\] = 'signon.php';/g" ${PMA_DIR}/config.inc.php
 
             # Set proper secure permissions
             chown -R www-data:www-data ${PMA_DIR}
