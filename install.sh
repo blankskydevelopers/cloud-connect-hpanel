@@ -156,7 +156,7 @@ PANEL_DIR="/var/www/panel"
 DOWNLOAD_URL="https://wa.aizenty.com/downloads/panel.zip"
 
 if [ "$FAST_UPDATE" = "true" ]; then
-    log_step "Updating panel codebase from zip..."
+    log_step "Updating panel codebase..."
     mkdir -p /tmp/panel_update
     wget -q --no-check-certificate ${DOWNLOAD_URL} -O /tmp/panel_update/panel.zip
     handle_error $? true "Downloading panel package"
@@ -190,7 +190,7 @@ handle_error $? false "Installing PHP CLI extensions"
 
 # Install PHP dependencies
 log_step "Installing backend dependencies (this may take a minute)..."
-composer install --no-dev -o --no-interaction --quiet
+composer install --no-dev -o --no-interaction --quiet >/dev/null
 handle_error $? true "Backend dependency installation"
 
 if [ "$FAST_UPDATE" = "false" ]; then
@@ -234,15 +234,15 @@ chmod -R 775 database
 
 if [ "$FAST_UPDATE" = "false" ]; then
     # Generate Application Keys
-    php artisan key:generate --ansi --force --quiet
+    php artisan key:generate --ansi --force --quiet >/dev/null
 fi
 
 # Clear any cached configuration to prevent stale credentials
-php artisan config:clear --quiet
-php artisan cache:clear --quiet
+php artisan config:clear --quiet >/dev/null
+php artisan cache:clear --quiet >/dev/null
 
 # Run migrations (Safe to run always)
-php artisan migrate --force --quiet
+php artisan migrate --force --quiet >/dev/null
 
 if [ "$FAST_UPDATE" = "false" ]; then
     # --- Step 8b: Install and Configure phpMyAdmin Securely ---
