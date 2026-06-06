@@ -195,7 +195,8 @@ handle_error $? false "Installing PHP CLI extensions"
 # Install PHP dependencies
 log_step "Installing backend dependencies (this may take a few minutes)..."
 rm -f bootstrap/cache/config.php bootstrap/cache/routes.php bootstrap/cache/services.php bootstrap/cache/packages.php
-composer install --no-dev -o --no-interaction
+composer clear-cache
+composer install --no-dev -o --no-interaction --prefer-dist
 handle_error $? true "Backend dependency installation"
 
 if [ "$FAST_UPDATE" = "false" ]; then
