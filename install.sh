@@ -88,7 +88,7 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get upgrade -y
     handle_error $? false "System package upgrade"
 
-    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx
+    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl
     handle_error $? true "Installing core utilities, intrusion prevention, Redis, and Certbot"
 
     # --- Step 2: Configure PHP Repository ---
@@ -272,7 +272,7 @@ if [ "$FAST_UPDATE" = "false" ]; then
             sed -i "s/\$cfg\['blowfish_secret'\] = '';/\$cfg\['blowfish_secret'\] = '${BLOWFISH_SECRET}';/g" ${PMA_DIR}/config.inc.php
             
             # Use Single Sign-On (SSO) signon auth method
-            sed -i "s/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'cookie';/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'signon';\n\$cfg\['Servers'\]\[\$i\]\['SignonSession'\] = 'PmaSignonSession';\n\$cfg\['Servers'\]\[\$i\]\['SignonURL'\] = 'signon.php';/g" ${PMA_DIR}/config.inc.php
+            sed -i "s/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'cookie';/\$cfg\['Servers'\]\[\$i\]\['auth_type'\] = 'signon';\n\$cfg\['Servers'\]\[\$i\]\['SignonSession'\] = 'PmaSignonSession';\n\$cfg\['Servers'\]\[\$i\]\['SignonURL'\] = 'signon.php';\n\$cfg\['CookieSecure'\] = false;/g" ${PMA_DIR}/config.inc.php
 
             # Set proper secure permissions
             chown -R www-data:www-data ${PMA_DIR}
@@ -430,7 +430,9 @@ if [ -z "$SERVER_IP" ]; then
 fi
 
 echo "Access your panel: http://${SERVER_IP}:8099"
-echo "Administrator Credentials:"
-echo "Email: $ADMIN_EMAIL"
-echo "Password: $ADMIN_PASSWORD"
+if [ -n "$ADMIN_EMAIL" ]; then
+    echo "Administrator Credentials:"
+    echo "Email: $ADMIN_EMAIL"
+    echo "Password: $ADMIN_PASSWORD"
+fi
 echo "Verify logs: cat ${LOG_FILE}"
