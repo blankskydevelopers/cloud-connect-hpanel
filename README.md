@@ -33,7 +33,7 @@ A high-performance, lightweight, and modern web hosting control panel built on L
 To deploy the control panel on a fresh, clean Ubuntu LTS (22.04 / 24.04) server, run the automated installation script as root:
 
 ```bash
-sudo bash install.sh
+curl -skSL https://raw.githubusercontent.com/blankskydevelopers/cloud-connect-hpanel/main/install.sh | sudo bash
 ```
 
 ### What the installer does:
