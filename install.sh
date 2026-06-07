@@ -388,6 +388,14 @@ handle_error $? false "Fail2Ban configuration"
 log_step "Enabling and restarting core system services..."
 systemctl enable nginx
 systemctl restart nginx
+if systemctl list-unit-files --type=service | grep -q "lsws.service"; then
+    systemctl enable lsws
+    systemctl restart lsws
+fi
+if systemctl list-unit-files --type=service | grep -q "litespeed.service"; then
+    systemctl enable litespeed
+    systemctl restart litespeed
+fi
 for version in 8.1 8.2 8.3 8.4; do
     if systemctl list-unit-files --type=service | grep -q "php${version}-fpm.service"; then
         systemctl enable php${version}-fpm
