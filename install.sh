@@ -425,7 +425,8 @@ log_step "Applying final secure folder permissions..."
 groupadd -f webusers
 usermod -a -G webusers www-data
 chown -R :webusers /home/hosting/webusers 2>/dev/null || true
-chmod -R 770 /home/hosting/webusers 2>/dev/null || true
+chmod 755 /home/hosting/webusers 2>/dev/null || true
+find /home/hosting/webusers -mindepth 1 -maxdepth 1 -type d -exec chmod 770 {} + 2>/dev/null || true
 find /home/hosting/webusers -type d -name ".ssh" -exec chmod 700 {} + 2>/dev/null || true
 find /home/hosting/webusers -type f -name "authorized_keys" -exec chmod 600 {} + 2>/dev/null || true
 chown -R www-data:www-data ${PANEL_DIR}
