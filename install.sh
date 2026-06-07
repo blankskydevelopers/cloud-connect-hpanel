@@ -336,8 +336,8 @@ WorkingDirectory=${PANEL_DIR}
 ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8099
 Restart=always
 RestartSec=5
-StandardOutput=append:/var/log/panel-service.log
-StandardError=append:/var/log/panel-service.log
+StandardOutput=append:${PANEL_DIR}/storage/logs/panel-service.log
+StandardError=append:${PANEL_DIR}/storage/logs/panel-service.log
 
 [Install]
 WantedBy=multi-user.target
