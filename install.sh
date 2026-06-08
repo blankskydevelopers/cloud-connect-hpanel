@@ -234,7 +234,14 @@ if [ "$FAST_UPDATE" = "false" ]; then
     mysql -e "GRANT ALL PRIVILEGES ON ${PANEL_DB_NAME}.* TO '${PANEL_DB_USER}'@'localhost';"
     mysql -e "FLUSH PRIVILEGES;"
 
+    # Detect server IP
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    if [ -z "$SERVER_IP" ]; then
+        SERVER_IP="127.0.0.1"
+    fi
+
     # Update .env configuration
+    update_env_key "APP_URL" "http://${SERVER_IP}:8099"
     update_env_key "DB_CONNECTION" "mysql"
     update_env_key "DB_HOST" "localhost"
     update_env_key "DB_PORT" "3306"
