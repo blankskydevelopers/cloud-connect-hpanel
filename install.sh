@@ -101,6 +101,12 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get install -y nginx
     handle_error $? true "Installing Nginx"
 
+    # Remove the default 'Welcome to nginx' site — it intercepts all port 80 requests
+    # and shows the nginx default page instead of our hosted websites.
+    rm -f /etc/nginx/sites-enabled/default
+    rm -f /etc/nginx/sites-available/default
+    log_step "Nginx default site removed."
+
     # --- Step 4: Install PHP-FPM Versions (8.1, 8.2, 8.3, 8.4) ---
     log_step "Installing PHP-FPM Versions and extension modules..."
     for version in 8.1 8.2 8.3 8.4; do
@@ -110,6 +116,13 @@ if [ "$FAST_UPDATE" = "false" ]; then
         php${version}-opcache php${version}-redis php${version}-sqlite3 \
         php${version}-mbstring php${version}-xml php${version}-zip
         handle_error $? false "PHP-FPM ${version} installation"
+
+        # Disable the default 'www' pool — it uses pm=dynamic and keeps idle workers alive.
+        # Our panel and website pools handle their own workers efficiently (pm=ondemand).
+        if [ -f /etc/php/${version}/fpm/pool.d/www.conf ]; then
+            mv /etc/php/${version}/fpm/pool.d/www.conf /etc/php/${version}/fpm/pool.d/www.conf.disabled
+            log_step "PHP ${version} default www pool disabled (no idle workers)."
+        fi
     done
 
     # Create global symlinks
@@ -296,6 +309,7 @@ fi
 log_step "Configuring passwordless sudo rules..."
 SUDOERS_FILE="/etc/sudoers.d/panel-commands"
 cat << 'EOF' > ${SUDOERS_FILE}
+www-data ALL=(ALL) NOPASSWD: /usr/sbin/nginx *
 www-data ALL=(ALL) NOPASSWD: /usr/local/lsws/bin/lswsctrl *
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/service mysql reload
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/service mysql restart
@@ -319,6 +333,8 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
+www-data ALL=(ALL) NOPASSWD: /usr/bin/touch *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/setfacl *
 EOF
 chmod 0440 ${SUDOERS_FILE}
 
@@ -344,7 +360,7 @@ pm.max_children = 5
 pm.process_idle_timeout = 10s
 pm.max_requests = 500
 
-php_admin_value[open_basedir] = ${PANEL_DIR}:/tmp
+php_admin_value[open_basedir] = ${PANEL_DIR}:/home/hosting/webusers:/tmp
 php_admin_value[memory_limit] = 128M
 EOF
 
@@ -454,8 +470,17 @@ fi
 log_step "Enabling only the panel PHP-FPM version (${CLI_PHP})..."
 for version in 8.1 8.2 8.3 8.4; do
     if systemctl list-unit-files --type=service | grep -q "php${version}-fpm.service"; then
+        # Create systemd override to disable ProtectSystem and allow writing to nginx/php config directories
+        mkdir -p /etc/systemd/system/php${version}-fpm.service.d/
+        cat <<EOF > /etc/systemd/system/php${version}-fpm.service.d/override.conf
+[Service]
+ProtectSystem=false
+ReadWritePaths=/etc/nginx /etc/php
+EOF
+
         if [ "$version" = "${CLI_PHP}" ]; then
             # Enable and start only the panel's PHP version
+            systemctl daemon-reload
             systemctl enable php${version}-fpm
             systemctl restart php${version}-fpm
             log_step "PHP ${version}-FPM started (panel version)."
