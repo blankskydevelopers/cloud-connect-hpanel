@@ -322,31 +322,85 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
 EOF
 chmod 0440 ${SUDOERS_FILE}
 
-# --- Step 10: Setup Systemd Panel Daemon ---
-log_step "Configuring autostart Systemd service for Panel..."
-SERVICE_FILE="/etc/systemd/system/panel.service"
-cat << EOF > ${SERVICE_FILE}
-[Unit]
-Description=Cloud Connect by Aizenty Control Panel Daemon
-After=network.target mysql.service nginx.service
+# --- Step 10: Setup Panel via Nginx + PHP-FPM (Production-grade, no php artisan serve) ---
+log_step "Configuring panel Nginx virtual host on port 8099..."
 
-[Service]
-User=www-data
-WorkingDirectory=${PANEL_DIR}
-ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8099
-Restart=always
-RestartSec=5
-StandardOutput=append:${PANEL_DIR}/storage/logs/panel-service.log
-StandardError=append:${PANEL_DIR}/storage/logs/panel-service.log
+# Detect current PHP CLI version for FPM
+CLI_PHP=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
 
-[Install]
-WantedBy=multi-user.target
+# Create PHP-FPM pool for panel
+PANEL_POOL_FILE="/etc/php/${CLI_PHP}/fpm/pool.d/panel.conf"
+cat << EOF > ${PANEL_POOL_FILE}
+[panel]
+user = www-data
+group = www-data
+listen = /run/php/php${CLI_PHP}-fpm-panel.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 4
+pm.max_requests = 500
+
+php_admin_value[open_basedir] = ${PANEL_DIR}:/tmp
+php_admin_value[memory_limit] = 128M
 EOF
 
-systemctl daemon-reload
-systemctl enable panel.service
-systemctl restart panel.service
-handle_error $? true "Restarting panel daemon service"
+# Reload PHP-FPM to register new pool
+systemctl reload php${CLI_PHP}-fpm 2>/dev/null || systemctl restart php${CLI_PHP}-fpm
+
+# Create Nginx virtual host for panel on port 8099
+PANEL_NGINX_CONF="/etc/nginx/sites-available/panel"
+cat << NGINXEOF > ${PANEL_NGINX_CONF}
+server {
+    listen 8099;
+    server_name _;
+    root ${PANEL_DIR}/public;
+    index index.php;
+
+    access_log /var/log/nginx/panel-access.log;
+    error_log  /var/log/nginx/panel-error.log;
+
+    client_max_body_size 50M;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php${CLI_PHP}-fpm-panel.sock;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_read_timeout 120;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+NGINXEOF
+
+# Enable the panel nginx config
+ln -sf ${PANEL_NGINX_CONF} /etc/nginx/sites-enabled/panel
+
+# Test and reload Nginx
+/usr/sbin/nginx -t && systemctl reload nginx
+handle_error $? true "Panel Nginx configuration"
+
+# Remove old php artisan serve systemd service if it exists
+if [ -f /etc/systemd/system/panel.service ]; then
+    systemctl stop panel.service 2>/dev/null || true
+    systemctl disable panel.service 2>/dev/null || true
+    rm -f /etc/systemd/system/panel.service
+    systemctl daemon-reload
+fi
+
+log_step "Panel is now served via Nginx + PHP-FPM on port 8099 (production-grade)."
 
 # --- Step 11: Configure System Firewall & Fail2Ban Jails ---
 log_step "Configuring system firewalls..."
