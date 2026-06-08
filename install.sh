@@ -170,7 +170,7 @@ fi
 
 # --- Step 8: Deploy & Bootstrap Control Panel Application ---
 PANEL_DIR="/var/www/panel"
-DOWNLOAD_URL="https://wa.aizenty.com/downloads/panel.zip"
+DOWNLOAD_URL="https://license.aizenty.com/downloads/panel.zip"
 
 if [ "$FAST_UPDATE" = "true" ]; then
     log_step "Updating panel codebase..."
@@ -242,6 +242,9 @@ if [ "$FAST_UPDATE" = "false" ]; then
     update_env_key "DB_USERNAME" "${PANEL_DB_USER}"
     update_env_key "DB_PASSWORD" "${PANEL_DB_PASS}"
 fi
+
+# Ensure storage and cache directories exist
+mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/app/public bootstrap/cache
 
 # Set up storage and bootstrap permissions (Run always to fix any permission issues)
 chown -R www-data:www-data storage
