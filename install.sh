@@ -339,11 +339,9 @@ listen.owner = www-data
 listen.group = www-data
 listen.mode = 0660
 
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 4
+pm = ondemand
+pm.max_children = 5
+pm.process_idle_timeout = 10s
 pm.max_requests = 500
 
 php_admin_value[open_basedir] = ${PANEL_DIR}:/tmp
@@ -450,12 +448,23 @@ if systemctl list-unit-files --type=service | grep -q "litespeed.service"; then
     systemctl enable litespeed
     systemctl restart litespeed
 fi
+# Only enable the PHP-FPM version used by the panel (CLI version)
+# Other versions are installed but NOT started by default to save RAM/CPU.
+# They will be started automatically when a website using that version is created.
+log_step "Enabling only the panel PHP-FPM version (${CLI_PHP})..."
 for version in 8.1 8.2 8.3 8.4; do
     if systemctl list-unit-files --type=service | grep -q "php${version}-fpm.service"; then
-        systemctl enable php${version}-fpm
-        systemctl restart php${version}-fpm
-    else
-        echo "PHP ${version} is not installed, skipping..."
+        if [ "$version" = "${CLI_PHP}" ]; then
+            # Enable and start only the panel's PHP version
+            systemctl enable php${version}-fpm
+            systemctl restart php${version}-fpm
+            log_step "PHP ${version}-FPM started (panel version)."
+        else
+            # Install but keep stopped — started on-demand when a site needs it
+            systemctl disable php${version}-fpm 2>/dev/null || true
+            systemctl stop php${version}-fpm 2>/dev/null || true
+            log_step "PHP ${version}-FPM installed but kept stopped (on-demand)."
+        fi
     fi
 done
 systemctl enable mysql
