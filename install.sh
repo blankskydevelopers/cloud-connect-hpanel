@@ -468,6 +468,13 @@ ufw allow 80/tcp           # HTTP
 ufw allow 443/tcp          # HTTPS
 ufw allow 8099/tcp         # Control Panel / phpMyAdmin Port
 ufw allow 7080/tcp         # LiteSpeed WebAdmin Console Port
+ufw allow 25/tcp            # SMTP (Incoming Mail)
+ufw allow 143/tcp           # IMAP (Mail client access)
+ufw allow 587/tcp           # SMTP Submission (Mail dispatching)
+ufw allow 993/tcp           # IMAP SSL (Secure Mail client access)
+ufw allow 465/tcp           # SMTP SSL (Secure Mail dispatching)
+ufw allow 110/tcp           # POP3 (Mail retrieval)
+ufw allow 995/tcp           # POP3 SSL (Secure Mail retrieval)
 ufw --force enable
 handle_error $? false "Firewall enablement"
 
