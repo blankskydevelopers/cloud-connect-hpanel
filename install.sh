@@ -8,6 +8,8 @@
 LOG_FILE="install.log"
 exec > >(tee -a ${LOG_FILE} ) 2>&1
 
+export DEBIAN_FRONTEND=noninteractive
+
 echo "=========================================================="
 echo " Starting Cloud Connect by Aizenty Installer (LiteSpeed)  "
 echo "=========================================================="
@@ -200,9 +202,11 @@ if ! command -v certbot &> /dev/null; then
 fi
 
 # Ensure email server packages are installed (runs on both fresh install and fast updates)
-log_step "Ensuring email server packages are installed..."
-apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
-handle_error $? false "Installing email server packages"
+if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpkg -s opendkim &>/dev/null; then
+    log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, and opendkim..."
+    apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+    handle_error $? false "Installing email server packages"
+fi
 
 # Ensure PHP extensions required for Composer are installed
 CLI_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
@@ -378,7 +382,7 @@ pm.max_children = 5
 pm.process_idle_timeout = 10s
 pm.max_requests = 500
 
-php_admin_value[open_basedir] = ${PANEL_DIR}:/home/hosting/webusers:/tmp
+php_admin_value[open_basedir] = ${PANEL_DIR}:/home/hosting/webusers:/tmp:/etc/postfix:/etc/dovecot:/etc/opendkim:/var/vmail:/var/log
 php_admin_value[memory_limit] = 128M
 EOF
 
