@@ -84,6 +84,20 @@ update_env_key() {
     fi
 }
 
+# --- Auto-configure Swap Space (To prevent OOM crash on low-resource VMs/VPS) ---
+SWAP_TOTAL=$(free -m | awk '/^Swap:/{print $2}')
+if [ -z "$SWAP_TOTAL" ] || [ "$SWAP_TOTAL" -eq 0 ]; then
+    log_step "No swap space detected. Creating a 2GB swap file to prevent Out of Memory (OOM) errors..."
+    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    log_step "Swap file created and enabled successfully."
+else
+    log_step "Swap space is already active: ${SWAP_TOTAL}MB. Skipping swap creation."
+fi
+
 if [ "$FAST_UPDATE" = "false" ]; then
     # --- Step 1: Update System & Install Core Utilities ---
     log_step "Updating system packages..."
