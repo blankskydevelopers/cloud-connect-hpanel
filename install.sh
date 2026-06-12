@@ -202,7 +202,7 @@ if ! command -v certbot &> /dev/null; then
 fi
 
 # Ensure email server packages are installed (runs on both fresh install and fast updates)
-if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpkg -s opendkim &>/dev/null; then
+if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpkg -s opendkim &>/dev/null || ! dpkg -s spamassassin &>/dev/null; then
     log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, and opendkim..."
     apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
     handle_error $? false "Installing email server packages"
