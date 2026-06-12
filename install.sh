@@ -545,7 +545,7 @@ systemctl restart opendkim
 
 # Configure scheduler cron job for panel background tasks
 log_step "Configuring background task scheduler cron job..."
-(crontab -u www-data -l 2>/dev/null; echo "* * * * * cd ${PANEL_DIR} && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -u www-data -
+(crontab -u www-data -l 2>/dev/null | grep -v "schedule:run"; echo "* * * * * cd ${PANEL_DIR} && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -u www-data -
 handle_error $? false "Task scheduler cron setup"
 
 log_step "=========================================================="
