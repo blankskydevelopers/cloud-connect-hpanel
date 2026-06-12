@@ -199,6 +199,14 @@ if ! command -v certbot &> /dev/null; then
     apt-get update -y && apt-get install -y certbot python3-certbot-nginx
 fi
 
+# Ensure email server packages are installed (runs on both fresh install and fast updates)
+if [ ! -f /usr/sbin/postfix ] || [ ! -f /usr/sbin/dovecot ] || [ ! -f /usr/sbin/opendkim ]; then
+    log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, and opendkim..."
+    apt-get update -y
+    apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+    handle_error $? false "Installing email server packages"
+fi
+
 # Ensure PHP extensions required for Composer are installed
 CLI_PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
 log_step "Ensuring PHP CLI extensions for PHP ${CLI_PHP_VERSION} are installed..."
