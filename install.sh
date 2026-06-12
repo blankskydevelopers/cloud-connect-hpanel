@@ -552,10 +552,18 @@ chmod -R 775 ${PANEL_DIR}/storage
 chmod -R 775 ${PANEL_DIR}/bootstrap/cache
 chmod -R 775 ${PANEL_DIR}/database
 
-# Configure mail folders permissions for panel writing
+# Configure mail folders permissions (strictly owned by root/system users for Postfix/Dovecot security checks)
 mkdir -p /etc/postfix /etc/dovecot /etc/opendkim /var/vmail
-chown -R www-data:www-data /etc/postfix /etc/dovecot /etc/opendkim
-chmod -R 775 /etc/postfix /etc/dovecot /etc/opendkim
+chown -R root:root /etc/postfix /etc/dovecot
+chmod 755 /etc/postfix /etc/dovecot
+find /etc/postfix /etc/dovecot -type f -exec chmod 644 {} +
+
+if id "opendkim" &>/dev/null; then
+    chown -R opendkim:opendkim /etc/opendkim
+else
+    chown -R root:root /etc/opendkim
+fi
+chmod 750 /etc/opendkim
 if [ ! -d /var/vmail ]; then
     groupadd -f vmail
     useradd -r -g vmail -d /var/vmail -s /sbin/nologin vmail
