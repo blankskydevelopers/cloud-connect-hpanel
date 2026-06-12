@@ -88,8 +88,8 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get upgrade -y
     handle_error $? false "System package upgrade"
 
-    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl
-    handle_error $? true "Installing core utilities, intrusion prevention, Redis, and Certbot"
+    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+    handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, and Email Server packages"
 
     # --- Step 2: Configure PHP Repository ---
     log_step "Adding PHP Ondrej repository..."
@@ -345,6 +345,9 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
 www-data ALL=(ALL) NOPASSWD: /usr/bin/touch *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/setfacl *
+www-data ALL=(ALL) NOPASSWD: /usr/sbin/postmap *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/sievec *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/opendkim-genkey *
 EOF
 chmod 0440 ${SUDOERS_FILE}
 
@@ -508,6 +511,14 @@ systemctl enable redis-server
 systemctl restart redis-server
 systemctl enable cron
 systemctl restart cron
+systemctl enable postfix
+systemctl restart postfix
+systemctl enable dovecot
+systemctl restart dovecot
+systemctl enable spamassassin
+systemctl restart spamassassin
+systemctl enable opendkim
+systemctl restart opendkim
 
 # Configure scheduler cron job for panel background tasks
 log_step "Configuring background task scheduler cron job..."
@@ -531,6 +542,17 @@ chown -R www-data:www-data ${PANEL_DIR}
 chmod -R 775 ${PANEL_DIR}/storage
 chmod -R 775 ${PANEL_DIR}/bootstrap/cache
 chmod -R 775 ${PANEL_DIR}/database
+
+# Configure mail folders permissions for panel writing
+mkdir -p /etc/postfix /etc/dovecot /etc/opendkim /var/vmail
+chown -R www-data:www-data /etc/postfix /etc/dovecot /etc/opendkim
+chmod -R 775 /etc/postfix /etc/dovecot /etc/opendkim
+if [ ! -d /var/vmail ]; then
+    groupadd -f vmail
+    useradd -r -g vmail -d /var/vmail -s /sbin/nologin vmail
+    chown -R vmail:vmail /var/vmail
+fi
+chmod 770 /var/vmail
 SERVER_IP=$(hostname -I | awk '{print $1}')
 if [ -z "$SERVER_IP" ]; then
     SERVER_IP="your_server_ip"
