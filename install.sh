@@ -626,10 +626,12 @@ if command -v postconf &>/dev/null; then
     postconf -e "smtpd_tls_key_file = /etc/ssl/private/ssl-cert-snakeoil.key"
     
     # Touch mapping files if they don't exist so postmap doesn't fail
-    touch /etc/postfix/virtual_domains /etc/postfix/virtual_mailbox_maps /etc/postfix/virtual_aliases
+    touch /etc/postfix/virtual_domains /etc/postfix/virtual_mailbox_maps /etc/postfix/virtual_aliases /etc/postfix/sni_maps
+    postconf -e "tls_server_sni_maps = hash:/etc/postfix/sni_maps"
     postmap /etc/postfix/virtual_domains 2>/dev/null || true
     postmap /etc/postfix/virtual_mailbox_maps 2>/dev/null || true
     postmap /etc/postfix/virtual_aliases 2>/dev/null || true
+    postmap /etc/postfix/sni_maps 2>/dev/null || true
     
     # Enable SMTP Submission (587) and SMTPS (465) in master.cf
     # Clean any duplicate or commented submission/smtps lines first
