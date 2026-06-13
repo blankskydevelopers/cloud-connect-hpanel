@@ -650,6 +650,14 @@ EOF
 
     systemctl restart dovecot
 fi
+
+# Sync existing email configurations if panel is installed
+if [ -f "artisan" ]; then
+    log_step "Syncing existing mail domains and accounts..."
+    php artisan tinker --execute="try { \$c = new \App\Http\Controllers\Api\EmailServerController(); \$r = new ReflectionMethod(\$c, 'syncPostfixDomains'); \$r->setAccessible(true); \$r->invoke(\$c); } catch (\Exception \$e) {}" 2>/dev/null || true
+    php artisan tinker --execute="try { \$c = new \App\Http\Controllers\Api\EmailServerController(); \$r = new ReflectionMethod(\$c, 'syncMailboxConfigurations'); \$r->setAccessible(true); \$r->invoke(\$c); } catch (\Exception \$e) {}" 2>/dev/null || true
+fi
+
 SERVER_IP=$(hostname -I | awk '{print $1}')
 if [ -z "$SERVER_IP" ]; then
     SERVER_IP="your_server_ip"
