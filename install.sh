@@ -625,9 +625,9 @@ if [ -d /etc/dovecot ]; then
     log_step "Configuring Dovecot for virtual mailboxes..."
     
     # 1. Set mail_location to maildir in 10-mail.conf
-    sed -i 's|^\s*#\?\s*mail_location\s*=.*|mail_location = maildir:/var/vmail/%d/%u/Maildir|' /etc/dovecot/conf.d/10-mail.conf
+    sed -i 's|^\s*#\?\s*mail_location\s*=.*|mail_location = maildir:/var/vmail/%d/%u|' /etc/dovecot/conf.d/10-mail.conf
     if ! grep -q "^mail_location" /etc/dovecot/conf.d/10-mail.conf; then
-        echo "mail_location = maildir:/var/vmail/%d/%u/Maildir" >> /etc/dovecot/conf.d/10-mail.conf
+        echo "mail_location = maildir:/var/vmail/%d/%u" >> /etc/dovecot/conf.d/10-mail.conf
     fi
     
     # 2. Enable passwd-file auth in 10-auth.conf
