@@ -600,6 +600,56 @@ if [ -x "$(command -v setfacl)" ]; then
     setfacl -R -m u:www-data:rwx /var/vmail 2>/dev/null || true
     setfacl -R -d -m u:www-data:rwx /var/vmail 2>/dev/null || true
 fi
+
+# Configure Postfix Virtual Mailbox settings out-of-the-box
+if command -v postconf &>/dev/null; then
+    log_step "Configuring Postfix virtual mailboxes..."
+    postconf -e "virtual_mailbox_domains = hash:/etc/postfix/virtual_domains"
+    postconf -e "virtual_mailbox_maps = hash:/etc/postfix/virtual_mailbox_maps"
+    postconf -e "virtual_mailbox_base = /var/vmail"
+    postconf -e "virtual_uid_maps = static:$(id -u vmail)"
+    postconf -e "virtual_gid_maps = static:$(id -g vmail)"
+    postconf -e "virtual_minimum_uid = 100"
+    
+    # Touch mapping files if they don't exist so postmap doesn't fail
+    touch /etc/postfix/virtual_domains /etc/postfix/virtual_mailbox_maps /etc/postfix/virtual_aliases
+    postmap /etc/postfix/virtual_domains 2>/dev/null || true
+    postmap /etc/postfix/virtual_mailbox_maps 2>/dev/null || true
+    postmap /etc/postfix/virtual_aliases 2>/dev/null || true
+    
+    systemctl restart postfix
+fi
+
+# Configure Dovecot for virtual mailboxes out-of-the-box
+if [ -d /etc/dovecot ]; then
+    log_step "Configuring Dovecot for virtual mailboxes..."
+    
+    # 1. Set mail_location to maildir in 10-mail.conf
+    sed -i 's|^\s*#\?\s*mail_location\s*=.*|mail_location = maildir:/var/vmail/%d/%u/Maildir|' /etc/dovecot/conf.d/10-mail.conf
+    if ! grep -q "^mail_location" /etc/dovecot/conf.d/10-mail.conf; then
+        echo "mail_location = maildir:/var/vmail/%d/%u/Maildir" >> /etc/dovecot/conf.d/10-mail.conf
+    fi
+    
+    # 2. Enable passwd-file auth in 10-auth.conf
+    sed -i 's|^!include auth-system.conf.ext|#!include auth-system.conf.ext|' /etc/dovecot/conf.d/10-auth.conf
+    sed -i 's|^#!include auth-passwdfile.conf.ext|!include auth-passwdfile.conf.ext|' /etc/dovecot/conf.d/10-auth.conf
+    
+    # 3. Configure auth-passwdfile.conf.ext
+    cat << 'EOF' > /etc/dovecot/conf.d/auth-passwdfile.conf.ext
+passdb {
+  driver = passwd-file
+  args = scheme=CRYPT username_format=%u /etc/dovecot/users
+}
+
+userdb {
+  driver = passwd-file
+  args = username_format=%u /etc/dovecot/users
+  default_fields = uid=vmail gid=vmail home=/var/vmail/%d/%u
+}
+EOF
+
+    systemctl restart dovecot
+fi
 SERVER_IP=$(hostname -I | awk '{print $1}')
 if [ -z "$SERVER_IP" ]; then
     SERVER_IP="your_server_ip"
