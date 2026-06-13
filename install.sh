@@ -590,7 +590,12 @@ if [ ! -d /var/vmail ]; then
     useradd -r -g vmail -d /var/vmail -s /sbin/nologin vmail
     chown -R vmail:vmail /var/vmail
 fi
+usermod -a -G vmail www-data
 chmod 770 /var/vmail
+if [ -x "$(command -v setfacl)" ]; then
+    setfacl -R -m u:www-data:rwx /var/vmail 2>/dev/null || true
+    setfacl -R -d -m u:www-data:rwx /var/vmail 2>/dev/null || true
+fi
 SERVER_IP=$(hostname -I | awk '{print $1}')
 if [ -z "$SERVER_IP" ]; then
     SERVER_IP="your_server_ip"
