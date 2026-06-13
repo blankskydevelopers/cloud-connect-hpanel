@@ -588,11 +588,12 @@ else
     chown -R root:root /etc/opendkim
 fi
 chmod 750 /etc/opendkim
-if [ ! -d /var/vmail ]; then
+if ! id "vmail" &>/dev/null; then
     groupadd -f vmail
     useradd -r -g vmail -d /var/vmail -s /sbin/nologin vmail
-    chown -R vmail:vmail /var/vmail
 fi
+mkdir -p /var/vmail
+chown -R vmail:vmail /var/vmail
 usermod -a -G vmail www-data
 chmod 770 /var/vmail
 if [ -x "$(command -v setfacl)" ]; then
