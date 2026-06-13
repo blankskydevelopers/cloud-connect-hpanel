@@ -104,8 +104,8 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get upgrade -y
     handle_error $? false "System package upgrade"
 
-    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools clamav clamav-daemon
-    handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, Email Server, and ClamAV packages"
+    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+    handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, and Email Server packages"
 
     # --- Step 2: Configure PHP Repository ---
     log_step "Adding PHP Ondrej repository..."
@@ -182,22 +182,6 @@ if [ "$FAST_UPDATE" = "false" ]; then
     mkdir -p /home/hosting/backups
     chown -R www-data:www-data /home/hosting/backups
     chmod 755 /home/hosting/backups
-
-    # --- Step 7b: Setup ClamAV Malware Scanner ---
-    log_step "Configuring ClamAV malware scanner..."
-    # Create quarantine directory for isolated malware files
-    mkdir -p /home/hosting/quarantine
-    chmod 700 /home/hosting/quarantine
-    chown -R www-data:www-data /home/hosting/quarantine
-
-    # Stop ClamAV daemon briefly to allow freshclam to update virus definitions
-    systemctl stop clamav-freshclam 2>/dev/null || true
-    # Update virus definitions (non-blocking, allow failure on first install)
-    freshclam --quiet || log_step "freshclam update skipped (will retry on next scheduled run)"
-    # Re-enable and start the freshclam auto-update daemon
-    systemctl enable clamav-freshclam
-    systemctl start clamav-freshclam
-    log_step "ClamAV installed. Virus definitions will auto-update daily via clamav-freshclam."
 fi
 
 # --- Step 8: Deploy & Bootstrap Control Panel Application ---
