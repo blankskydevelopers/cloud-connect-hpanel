@@ -369,6 +369,9 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
 www-data ALL=(ALL) NOPASSWD: /usr/bin/touch *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/setfacl *
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/postmap *
+www-data ALL=(ALL) NOPASSWD: /usr/sbin/postconf *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/test *
+www-data ALL=(ALL) NOPASSWD: /usr/bin/sed *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/sievec *
 www-data ALL=(ALL) NOPASSWD: /usr/bin/opendkim-genkey *
 EOF
