@@ -603,7 +603,9 @@ fi
 
 # Configure Postfix Virtual Mailbox settings out-of-the-box
 if command -v postconf &>/dev/null; then
-    log_step "Configuring Postfix virtual mailboxes..."
+    log_step "Configuring Postfix virtual mailboxes, SASL auth, and TLS..."
+    
+    # Core mail routing
     postconf -e "virtual_mailbox_domains = hash:/etc/postfix/virtual_domains"
     postconf -e "virtual_mailbox_maps = hash:/etc/postfix/virtual_mailbox_maps"
     postconf -e "virtual_mailbox_base = /var/vmail"
@@ -611,18 +613,58 @@ if command -v postconf &>/dev/null; then
     postconf -e "virtual_gid_maps = static:$(id -g vmail)"
     postconf -e "virtual_minimum_uid = 100"
     
+    # SASL Authentication (Dovecot delegation)
+    postconf -e "smtpd_sasl_type = dovecot"
+    postconf -e "smtpd_sasl_path = private/auth"
+    postconf -e "smtpd_sasl_auth_enable = yes"
+    postconf -e "smtpd_recipient_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination"
+    
+    # TLS / SSL setup (default to snakeoil certificates so TLS connections don't error out-of-the-box)
+    postconf -e "smtpd_use_tls = yes"
+    postconf -e "smtpd_tls_security_level = may"
+    postconf -e "smtpd_tls_cert_file = /etc/ssl/certs/ssl-cert-snakeoil.pem"
+    postconf -e "smtpd_tls_key_file = /etc/ssl/private/ssl-cert-snakeoil.key"
+    
     # Touch mapping files if they don't exist so postmap doesn't fail
     touch /etc/postfix/virtual_domains /etc/postfix/virtual_mailbox_maps /etc/postfix/virtual_aliases
     postmap /etc/postfix/virtual_domains 2>/dev/null || true
     postmap /etc/postfix/virtual_mailbox_maps 2>/dev/null || true
     postmap /etc/postfix/virtual_aliases 2>/dev/null || true
     
+    # Enable SMTP Submission (587) and SMTPS (465) in master.cf
+    # Clean any duplicate or commented submission/smtps lines first
+    sed -i '/^\s*submission/d' /etc/postfix/master.cf
+    sed -i '/^\s*smtps/d' /etc/postfix/master.cf
+    
+    # Append clean configurations to the end of master.cf
+    cat << 'EOF' >> /etc/postfix/master.cf
+
+submission inet n       -       y       -       -       smtpd
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING
+
+smtps     inet  n       -       y       -       -       smtpd
+  -o syslog_name=postfix/smtps
+  -o smtpd_tls_wrappermode=yes
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING
+EOF
+
     systemctl restart postfix
 fi
 
 # Configure Dovecot for virtual mailboxes out-of-the-box
 if [ -d /etc/dovecot ]; then
-    log_step "Configuring Dovecot for virtual mailboxes..."
+    log_step "Configuring Dovecot for virtual mailboxes, SSL, and SASL socket..."
+    
+    # Ensure ssl-cert utility package is installed (provides snakeoil certs)
+    if ! dpkg -s ssl-cert &>/dev/null; then
+        apt-get install -y ssl-cert
+    fi
     
     # 1. Set mail_location to maildir in 10-mail.conf
     sed -i 's|^\s*#\?\s*mail_location\s*=.*|mail_location = maildir:/var/vmail/%d/%u|' /etc/dovecot/conf.d/10-mail.conf
@@ -645,6 +687,25 @@ userdb {
   driver = passwd-file
   args = username_format=%u /etc/dovecot/users
   default_fields = uid=vmail gid=vmail home=/var/vmail/%d/%u
+}
+EOF
+
+    # 4. Configure SSL in 10-ssl.conf
+    sed -i 's|^\s*#\?\s*ssl\s*=.*|ssl = yes|' /etc/dovecot/conf.d/10-ssl.conf
+    sed -i 's|^\s*#\?\s*ssl_cert\s*=.*|ssl_cert = </etc/ssl/certs/ssl-cert-snakeoil.pem|' /etc/dovecot/conf.d/10-ssl.conf
+    sed -i 's|^\s*#\?\s*ssl_key\s*=.*|ssl_key = </etc/ssl/private/ssl-cert-snakeoil.key|' /etc/dovecot/conf.d/10-ssl.conf
+
+    # 5. Expose Dovecot SASL authentication socket to Postfix in 10-master.conf
+    # Remove any existing unix_listener /var/spool/postfix/private/auth block or customize
+    # We can safely append it as Dovecot will merge service settings
+    cat << 'EOF' >> /etc/dovecot/conf.d/10-master.conf
+
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
 }
 EOF
 
