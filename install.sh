@@ -631,7 +631,7 @@ if command -v postconf &>/dev/null; then
     postmap /etc/postfix/virtual_domains 2>/dev/null || true
     postmap /etc/postfix/virtual_mailbox_maps 2>/dev/null || true
     postmap /etc/postfix/virtual_aliases 2>/dev/null || true
-    postmap /etc/postfix/sni_maps 2>/dev/null || true
+    postmap -F /etc/postfix/sni_maps 2>/dev/null || true
     
     # Enable SMTP Submission (587) and SMTPS (465) in master.cf
     # Clean any duplicate or commented submission/smtps lines first
