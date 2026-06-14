@@ -104,8 +104,9 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get upgrade -y
     handle_error $? false "System package upgrade"
 
-    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc spamd opendkim opendkim-tools
-    handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, and Email Server packages"
+    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc spamd opendkim opendkim-tools \
+        clamav clamav-daemon rkhunter chkrootkit lynis
+    handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, Email Server, and Security Scanner packages"
 
     # --- Step 2: Configure PHP Repository ---
     log_step "Adding PHP Ondrej repository..."
@@ -220,6 +221,28 @@ if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpk
     log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, spamd, and opendkim..."
     apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc spamd opendkim opendkim-tools
     handle_error $? false "Installing email server packages"
+fi
+
+# Ensure security scanner packages are installed (ClamAV, rkhunter, chkrootkit, lynis)
+if ! dpkg -s clamav &>/dev/null || ! dpkg -s rkhunter &>/dev/null || ! dpkg -s chkrootkit &>/dev/null; then
+    log_step "Security scanner packages not found. Installing ClamAV, rkhunter, chkrootkit, and lynis..."
+    apt-get install -y clamav clamav-daemon rkhunter chkrootkit lynis
+    handle_error $? false "Installing security scanner packages"
+fi
+
+# Update ClamAV virus definitions (non-blocking — runs in background)
+if command -v freshclam &>/dev/null; then
+    log_step "Updating ClamAV virus definitions in background..."
+    # Stop clamav-freshclam service if running to avoid lock conflict
+    systemctl stop clamav-freshclam 2>/dev/null || true
+    freshclam --quiet &
+    log_step "ClamAV definitions update started in background."
+fi
+
+# Enable ClamAV daemon
+if systemctl list-unit-files --type=service | grep -q "clamav-daemon.service"; then
+    systemctl enable clamav-daemon
+    systemctl restart clamav-daemon 2>/dev/null || true
 fi
 
 # Ensure PHP extensions required for Composer are installed
