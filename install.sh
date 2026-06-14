@@ -296,6 +296,23 @@ if [ "$FAST_UPDATE" = "false" ]; then
     update_env_key "DB_PASSWORD" "${PANEL_DB_PASS}"
 fi
 
+# Ensure Reverb configuration is present in .env
+log_step "Ensuring Reverb environment variables in .env..."
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+update_env_key "BROADCAST_CONNECTION" "reverb"
+update_env_key "REVERB_APP_ID" "694347"
+update_env_key "REVERB_APP_KEY" "cei3aw3ual3q2647ojod"
+update_env_key "REVERB_APP_SECRET" "synwx9qfsm0qkux9d8lk"
+update_env_key "REVERB_HOST" '"localhost"'
+update_env_key "REVERB_PORT" "8080"
+update_env_key "REVERB_SCHEME" "http"
+update_env_key "VITE_REVERB_APP_KEY" '"${REVERB_APP_KEY}"'
+update_env_key "VITE_REVERB_HOST" '"${REVERB_HOST}"'
+update_env_key "VITE_REVERB_PORT" '"${REVERB_PORT}"'
+update_env_key "VITE_REVERB_SCHEME" '"${REVERB_SCHEME}"'
+
 # Ensure storage and cache directories exist
 mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/app/public bootstrap/cache
 
@@ -445,6 +462,18 @@ server {
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location /app/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host \$http_host;
+        proxy_set_header Scheme \$scheme;
+        proxy_set_header SERVER_PORT \$server_port;
+        proxy_set_header REMOTE_ADDR \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://127.0.0.1:8080;
     }
 
     location ~ \.php\$ {
