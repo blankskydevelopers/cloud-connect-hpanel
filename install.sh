@@ -548,8 +548,11 @@ systemctl enable postfix
 systemctl restart postfix
 systemctl enable dovecot
 systemctl restart dovecot
-systemctl enable spamassassin
-systemctl restart spamassassin
+    if [ -f /etc/default/spamassassin ]; then
+        sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/spamassassin
+    fi
+    systemctl enable spamassassin
+    systemctl restart spamassassin
 systemctl enable opendkim
 systemctl restart opendkim
 
