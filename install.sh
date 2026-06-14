@@ -104,7 +104,7 @@ if [ "$FAST_UPDATE" = "false" ]; then
     apt-get update -y && apt-get upgrade -y
     handle_error $? false "System package upgrade"
 
-    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+    apt-get install -y wget curl git software-properties-common unzip ufw sudo fail2ban redis-server certbot python3-certbot-nginx acl postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc spamd opendkim opendkim-tools
     handle_error $? true "Installing core utilities, intrusion prevention, Redis, Certbot, and Email Server packages"
 
     # --- Step 2: Configure PHP Repository ---
@@ -216,9 +216,9 @@ if ! command -v certbot &> /dev/null; then
 fi
 
 # Ensure email server packages are installed (runs on both fresh install and fast updates)
-if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpkg -s opendkim &>/dev/null || ! dpkg -s spamassassin &>/dev/null; then
-    log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, and opendkim..."
-    apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc opendkim opendkim-tools
+if ! dpkg -s postfix &>/dev/null || ! dpkg -s dovecot-imapd &>/dev/null || ! dpkg -s opendkim &>/dev/null || ! dpkg -s spamassassin &>/dev/null || ! dpkg -s spamd &>/dev/null; then
+    log_step "Email server packages not found. Installing postfix, dovecot, spamassassin, spamd, and opendkim..."
+    apt-get install -y postfix dovecot-imapd dovecot-pop3d dovecot-sieve spamassassin spamc spamd opendkim opendkim-tools
     handle_error $? false "Installing email server packages"
 fi
 
@@ -648,6 +648,8 @@ submission inet n       -       y       -       -       smtpd
   -o syslog_name=postfix/submission
   -o smtpd_tls_security_level=encrypt
   -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_security_options=noanonymous
+  -o smtpd_sasl_tls_security_options=noanonymous
   -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
   -o milter_macro_daemon_name=ORIGINATING
 
@@ -655,6 +657,8 @@ smtps     inet  n       -       y       -       -       smtpd
   -o syslog_name=postfix/smtps
   -o smtpd_tls_wrappermode=yes
   -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_security_options=noanonymous
+  -o smtpd_sasl_tls_security_options=noanonymous
   -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
   -o milter_macro_daemon_name=ORIGINATING
 EOF
@@ -681,11 +685,19 @@ if [ -d /etc/dovecot ]; then
     sed -i 's|^!include auth-system.conf.ext|#!include auth-system.conf.ext|' /etc/dovecot/conf.d/10-auth.conf
     sed -i 's|^#!include auth-passwdfile.conf.ext|!include auth-passwdfile.conf.ext|' /etc/dovecot/conf.d/10-auth.conf
     
+    # Enable PLAIN and LOGIN mechanisms so SMTP clients can authenticate
+    # (CRYPT-only scheme blocks SASL mechanism negotiation with Postfix)
+    sed -i 's|^\s*#\?\s*auth_mechanisms\s*=.*|auth_mechanisms = plain login|' /etc/dovecot/conf.d/10-auth.conf
+    if ! grep -q "^auth_mechanisms" /etc/dovecot/conf.d/10-auth.conf; then
+        echo "auth_mechanisms = plain login" >> /etc/dovecot/conf.d/10-auth.conf
+    fi
+    
     # 3. Configure auth-passwdfile.conf.ext
+    # Use SHA512-CRYPT scheme - compatible with PLAIN/LOGIN auth mechanisms
     cat << 'EOF' > /etc/dovecot/conf.d/auth-passwdfile.conf.ext
 passdb {
   driver = passwd-file
-  args = scheme=CRYPT username_format=%u /etc/dovecot/users
+  args = scheme=SHA512-CRYPT username_format=%u /etc/dovecot/users
 }
 
 userdb {
