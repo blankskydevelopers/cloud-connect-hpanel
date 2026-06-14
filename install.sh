@@ -497,6 +497,21 @@ ln -sf ${PANEL_NGINX_CONF} /etc/nginx/sites-enabled/panel
 /usr/sbin/nginx -t && systemctl reload nginx
 handle_error $? true "Panel Nginx configuration"
 
+# Auto-patch any other panel configurations (like panel-custom on port 443) to include Reverb proxy
+log_step "Ensuring Laravel Reverb proxy in all Nginx server blocks for the panel..."
+for config in /etc/nginx/sites-enabled/*; do
+    if [ -f "$config" ] && grep -q "${PANEL_DIR}/public" "$config"; then
+        if ! grep -q "location /app/" "$config"; then
+            log_step "Injecting Reverb WebSocket proxy into Nginx config: $config"
+            # Insert before the first location ~ \.php block
+            sed -i '/location ~ \\.php/i \
+    location /app/ {\n        proxy_http_version 1.1;\n        proxy_set_header Host \$http_host;\n        proxy_set_header Scheme \$scheme;\n        proxy_set_header SERVER_PORT \$server_port;\n        proxy_set_header REMOTE_ADDR \$remote_addr;\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n        proxy_set_header Upgrade \$http_upgrade;\n        proxy_set_header Connection "Upgrade";\n        proxy_pass http://127.0.0.1:8080;\n    }\n' "$config"
+        fi
+    fi
+done
+/usr/sbin/nginx -t && systemctl reload nginx
+
+
 # Remove old php artisan serve systemd service if it exists
 if [ -f /etc/systemd/system/panel.service ]; then
     systemctl stop panel.service 2>/dev/null || true
