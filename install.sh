@@ -494,6 +494,7 @@ ufw allow 80/tcp           # HTTP
 ufw allow 443/tcp          # HTTPS
 ufw allow 8099/tcp         # Control Panel / phpMyAdmin Port
 ufw allow 7080/tcp         # LiteSpeed WebAdmin Console Port
+ufw allow 8080/tcp         # Laravel Reverb Port
 ufw allow 25/tcp            # SMTP (Incoming Mail)
 ufw allow 143/tcp           # IMAP (Mail client access)
 ufw allow 587/tcp           # SMTP Submission (Mail dispatching)
@@ -578,6 +579,32 @@ systemctl restart dovecot
     systemctl restart spamassassin
 systemctl enable opendkim
 systemctl restart opendkim
+
+# Setup and enable Laravel Reverb systemd service
+log_step "Configuring and enabling Laravel Reverb systemd service..."
+cat << REVERFEOF > /etc/systemd/system/reverb.service
+[Unit]
+Description=Laravel Reverb Server
+After=network.target mysql.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=${PANEL_DIR}
+ExecStart=/usr/bin/php artisan reverb:start --host=0.0.0.0 --port=8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+REVERFEOF
+
+systemctl daemon-reload
+systemctl enable reverb
+systemctl restart reverb
+handle_error $? false "Reverb service setup"
+
 
 # Configure scheduler cron job for panel background tasks
 log_step "Configuring background task scheduler cron job..."
