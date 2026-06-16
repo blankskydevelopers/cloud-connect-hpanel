@@ -7,15 +7,16 @@ A high-performance, lightweight, and modern web hosting control panel built on L
 ## 🚀 Key Features & Automation Engine
 
 * **Nginx Reverse Proxy & PM2 Integration**: Lightning-fast static routing, integrated out of the box with Node.js/Python process management. Enabling Node/Python automatically configures Nginx to reverse proxy HTTP/HTTPS traffic to internal dynamic application ports.
-* **Isolated Environment Boundaries**: Every website is placed inside its own Linux system user account under `/home/hosting/webusers/{username}` with security jails (restricted rbash locks) and isolated SFTP/SSH directory boundaries.
+* **Auto Jail System & Isolation**: Every website is placed inside its own Linux system user account under `/home/hosting/webusers/{username}` with security jails (rbash locks) and isolated SFTP/SSH directory boundaries automatically applied.
+* **One-Click Web App Installer**: Instantly deploy popular applications (like WordPress, Laravel, Node templates) with single-click automated database setup and domain configuration.
 * **Multi-PHP Pools Engine**: Run PHP websites isolated on distinct PHP-FPM versions (PHP 8.1, 8.2, 8.3, or 8.4) with individual socket pools. Idle workers automatically exit after 10 seconds (`pm = ondemand`) to save system memory.
+* **Email Server Manager**: Full setup of Postfix and Dovecot for hosting secure, custom email boxes with domain-based IMAP/SMTP SSL mapping and SNI SSL certification fallbacks.
 * **Databases Manager**: Instantly provision isolated MySQL databases and database users with auto-generated secure passwords.
 * **Integrated Secure phpMyAdmin**: Automatic download, secure configuration with custom Blowfish Secret keys, and isolated database access out of the box via `/phpmyadmin` on the control panel port.
-* **File Manager**: Comprehensive web-based file manager (CRUD, upload/download files, create folders, Zip/Unzip archives) within security borders.
-* **Let's Encrypt SSL Integration**: Request and install free SSL certificates for domains with one click.
+* **File Manager**: Comprehensive web-based file manager (CRUD, upload/download files, create folders, Zip/Unzip archives) with multi-selection support, keyboard shortcuts (`Ctrl + A`, `Delete`), and built-in text editor.
+* **Let's Encrypt SSL Integration**: Request and install free SSL certificates for domains, subdomains, and mail servers with one click.
 * **Service Daemon Management**: Track and start/stop/restart core system services (Nginx, MySQL, Cron, Redis, Postfix, Dovecot, Fail2ban, etc.).
-* **Integrated Mail Server**: Full setup of Postfix and Dovecot for hosting secure email boxes with IMAP/SMTP SSL fallbacks.
-* **Security & Firewall (UFW)**: Full firewall setup with automated dynamic active SSH port detection to prevent administrator lockouts.
+* **Security & Firewall (UFW & Fail2ban)**: Full firewall setup with automated dynamic active SSH port detection to prevent administrator lockouts, coupled with Fail2ban intrusion prevention settings.
 * **Modern Premium UI/UX**: White/Slate minimal clean responsive dashboard using React + InertiaJS.
 
 ---
