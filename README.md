@@ -13,7 +13,7 @@ A fully secured, high-performance, lightweight, and modern production web hostin
 * **Email Server Manager**: Full setup of secure, custom email boxes with domain-based SSL mapping and certificate fallbacks.
 * **Databases Manager**: Instantly provision isolated databases and database users with auto-generated secure passwords.
 * **Integrated Database Administration Portal**: Automatic download, secure configuration with custom Blowfish Secret keys, and isolated database access out of the box.
-* **File Manager**: Comprehensive web-based file manager (CRUD, upload/download files, create folders, Zip/Unzip archives) with multi-selection support, keyboard shortcuts (`Ctrl + A`, `Delete`), and a built-in text editor.
+* **File Manager**: Comprehensive web-based file manager (CRUD, upload/download, archives, and built-in editor) with multi-selection support.
 * **Let's Encrypt SSL Integration**: Request and install free SSL certificates for domains, subdomains, and mail servers with one click.
 * **Service Daemon Management**: Track, start, stop, and restart core system services from the UI.
 * **Security & Firewall (UFW & Fail2ban)**: Full firewall setup with automated dynamic active SSH port detection to prevent administrator lockouts, coupled with intrusion prevention settings.
